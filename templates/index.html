@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    艾瑞德在线工具
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: '微软雅黑', sans-serif;
+        }
+        body {
+            background-color: #f5f7fa;
+            padding: 40px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .search-box {
+            margin-bottom: 30px;
+        }
+        .search-box input {
+            width: 100%;
+            padding: 14px 20px;
+            border: 1px solid #e5e6eb;
+            border-radius: 12px;
+            font-size: 16px;
+            background: white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .tool-card {
+            background: white;
+            padding: 24px;
+            margin-bottom: 16px;
+            border-radius: 12px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .tool-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+        }
+        .tool-card h3 {
+            color: #333;
+            margin-bottom: 8px;
+        }
+        .tool-card p {
+            color: #666;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        .empty {
+            text-align: center;
+            color: #999;
+            padding: 40px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>艾瑞德在线工具</h1>
+
+    <div class="search-box">
+        <input type="text" id="searchInput" placeholder="搜索工具..." value="{{ search_key }}">
+    </div>
+
+    <div id="toolList">
+        {% if tools|length == 0 %}
+        <div class="empty">没有找到匹配的工具</div>
+        {% else %}
+        {% for tool in tools %}
+        <div class="tool-card" onclick="window.location.href='{{ tool.route }}'">
+            <h3>{{ tool.name }}</h3>
+            <p>{{ tool.desc }}</p>
+        </div>
+        {% endfor %}
+        {% endif %}
+    </div>
+</div>
+
+<script>
+    // 搜索功能，实时过滤
+    const searchInput = document.getElementById('searchInput');
+    searchInput.addEventListener('input', function() {
+        const key = this.value.trim();
+        window.location.href = `/?search=${encodeURIComponent(key)}`;
+    });
+</script>
+</body>
+</html>

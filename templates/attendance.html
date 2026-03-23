@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    考勤表自动转换 - 艾瑞德在线工具
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: '微软雅黑', sans-serif;
+        }
+        body {
+            background-color: #f5f7fa;
+            padding: 40px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+        }
+        .back {
+            margin-bottom: 20px;
+            color: #409eff;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 25px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+        }
+        input[type="file"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px dashed #ccc;
+            border-radius: 6px;
+            background: #fafafa;
+        }
+        button {
+            width: 100%;
+            padding: 14px;
+            background: #409eff;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: #337ecc;
+        }
+        .tip {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f0f9ff;
+            border-radius: 6px;
+            color: #666;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="back" onclick="window.location.href='/'">← 返回工具列表</div>
+    <h1>考勤表自动转换</h1>
+    <form method="POST" enctype="multipart/form-data">
+        <div class="form-group">
+            <label>原始考勤表（系统导出的原始表）</label>
+            <input type="file" name="old_file" accept=".xlsx,.xls" required>
+        </div>
+        <div class="form-group">
+            <label>部门底板表（你提供的部门底板）</label>
+            <input type="file" name="template_file" accept=".xlsx,.xls" required>
+        </div>
+        <button type="submit">开始转换，自动下载结果</button>
+    </form>
+    <div class="tip">
+        <strong>功能说明：</strong>
+        <ul>
+            <li>自动识别原始表的月份，自动适配日期、星期</li>
+            <li>自动删除多余的天数列，适配月份实际天数</li>
+            <li>自动处理考勤规则：旷工按正常出勤、产假/半天标记、半天统计</li>
+            <li>完全保留底板的人员名单和顺序，不改动原有格式</li>
+        </ul>
+    </div>
+</div>
+</body>
+</html>
