@@ -1,5 +1,3 @@
-import logging
-
 import pandas as pd
 from openpyxl import load_workbook
 from copy import copy
@@ -129,6 +127,22 @@ def process_attendance(old_path, template_path):
     wb = load_workbook(template_path)
     ws = wb.active
 
+    # 从底板的第二行提取部门和日期，用来生成文件名
+    title_cell = ws.cell(row=2, column=1).value
+    dept_name = ""
+    file_month = month  # 兜底用原始表的月份
+    if title_cell:
+        title_str = str(title_cell).strip()
+        # 先提取月份，支持 11月、01月 这种格式
+        month_match = re.search(r'(\d{1,2})月', title_str)
+        if month_match:
+            file_month = int(month_match.group(1))
+        # 提取干净的部门名，去掉年份、月份、考勤相关的后缀
+        dept_name = title_str
+        dept_name = re.sub(r'\d{4}年', '', dept_name)  # 去掉年份
+        dept_name = re.sub(r'\d{1,2}月', '', dept_name)  # 去掉月份
+        dept_name = dept_name.replace("考勤表", "").replace("考勤", "").replace("部门：","").strip()
+
     # 删除多余列
     if days_in_month <31:
         ws.delete_cols(33)
@@ -187,6 +201,18 @@ def process_attendance(old_path, template_path):
 
     # 保存输出
     output_name = f"{year}年{month}月考勤表_完成.xlsx"
+    output_path = os.path.join(os.path.dirname(old_path), output_name)
+    # 自动调整统计列的列宽，避免19.5显示成20
+    ws.column_dimensions['AG'].width = 8  # 出勤天数列
+    ws.column_dimensions['AH'].width = 8  # 加班天数列
+    ws.column_dimensions['AI'].width = 8  # 请假天数列
+
+    # 保存输出，根据底板第二行的部门和月份生成文件名
+    if dept_name:
+        output_name = f"{file_month}月{dept_name}考勤.xlsx"
+    else:
+        # 兜底，如果没提取到就用默认名字
+        output_name = f"{year}年{month}月考勤表_完成.xlsx"
     output_path = os.path.join(os.path.dirname(old_path), output_name)
     wb.save(output_path)
 
