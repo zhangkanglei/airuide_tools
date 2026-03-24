@@ -68,7 +68,6 @@ def process_attendance(old_path, template_path):
                 daily_status.append(None)
                 continue
             status_str = str(status).strip()
-            current_is_weekend = is_weekend[i]  # 当前日期是否为休息日
 
             # 产假处理
             if "产假" in status_str:
@@ -92,13 +91,14 @@ def process_attendance(old_path, template_path):
                 continue
 
             else:
-                # 外出规则：工作日外出算正常出勤，休息日外出不算
+                # 替换为 新规则（无工作日/休息日，只看文字）
+                # 外出 + 无休息 = 正常出勤 | 外出 + 休息 = 休息
                 if "外出" in status_str:
-                    if not current_is_weekend:  # 非休息日（工作日）
+                    if "休息" not in status_str:
                         sym = "√"
                         daily_status.append(sym)
                         work_days += 1
-                    else:  # 休息日外出，不算出勤
+                    else:
                         sym = None
                         daily_status.append(sym)
                     continue
@@ -133,13 +133,9 @@ def process_attendance(old_path, template_path):
 
                 # 正常出勤（仅工作日）
                 else:
-                    if not current_is_weekend:  # 工作日正常出勤
-                        sym = "√"
-                        daily_status.append(sym)
-                        work_days += 1
-                    else:  # 休息日无状态/其他，不算出勤
-                        sym = None
-                        daily_status.append(sym)
+                    sym = "√"
+                    daily_status.append(sym)
+                    work_days += 1
                     continue
 
         # 存入人员考勤数据
