@@ -72,7 +72,7 @@ def process_attendance(old_path, template_path):
                 sym = "产"
                 daily_status.append(sym)
                 continue
-            elif "0.5" in status_str or "半天" in status_str:
+            elif "0.5天" in status_str or "半天" in status_str:
                 sym = "半"
                 daily_status.append(sym)
                 if "事假" in status_str or "病假" in status_str:
@@ -86,6 +86,11 @@ def process_attendance(old_path, template_path):
                     leave_days +=0.5
                 continue
             else:
+                if "外出" in status_str:
+                    sym = "√"
+                    daily_status.append(sym)
+                    work_days +=1
+                    continue
                 if "病假" in status_str:
                     sym = "△"
                     daily_status.append(sym)
