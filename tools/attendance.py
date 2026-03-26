@@ -131,7 +131,7 @@ def process_attendance(old_path, template_path):
                     daily_status.append(sym)
                     continue
 
-                # 正常出勤（仅工作日）
+                # 正常出勤
                 else:
                     sym = "√"
                     daily_status.append(sym)
