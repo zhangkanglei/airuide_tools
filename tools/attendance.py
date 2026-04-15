@@ -216,24 +216,42 @@ def process_attendance(old_path, template_path):
                     cell.border = copy(template_cell.border)
             # 填充统计列：出勤/加班/请假（保留样式+自动调宽）
             # 核心修改：0值显示为空
-            # 出勤天数（原33→现34列）
-            work_days_val = person["work_days"] if person["work_days"] != 0 else ""
+            # 出勤天数（34列）
+            val_work = person["work_days"]
+            if val_work == 0:
+                work_days_val = ""
+            else:
+                # 整数转int（20.0→20），小数保留（0.5→0.5）
+                work_days_val = int(val_work) if val_work.is_integer() else val_work
             cell = ws.cell(row=row_idx, column=34, value=work_days_val)
             cell.font = uni_font
             cell.alignment = uni_align
             cell.border = copy(ws.cell(row=start_row, column=34).border)
-            # 加班天数（原34→现35列）
-            overtime_days_val = person["overtime_days"] if person["overtime_days"] != 0 else ""
+            cell.number_format = 'General'  # 固定格式，防止20变2
+
+            # 加班天数（35列）
+            val_over = person["overtime_days"]
+            if val_over == 0:
+                overtime_days_val = ""
+            else:
+                overtime_days_val = int(val_over) if val_over.is_integer() else val_over
             cell = ws.cell(row=row_idx, column=35, value=overtime_days_val)
-            cell.font = copy(ws.cell(row=start_row, column=35).font)
+            cell.font = uni_font
+            cell.alignment = uni_align
             cell.border = copy(ws.cell(row=start_row, column=35).border)
-            cell.alignment = copy(ws.cell(row=start_row, column=35).alignment)
-            # 请假天数（原35→现36列）
-            leave_days_val = person["leave_days"] if person["leave_days"] != 0 else ""
+            cell.number_format = 'General'
+
+            # 请假天数（36列）
+            val_leave = person["leave_days"]
+            if val_leave == 0:
+                leave_days_val = ""
+            else:
+                leave_days_val = int(val_leave) if val_leave.is_integer() else val_leave
             cell = ws.cell(row=row_idx, column=36, value=leave_days_val)
-            cell.font = copy(ws.cell(row=start_row, column=36).font)
+            cell.font = uni_font
+            cell.alignment = uni_align
             cell.border = copy(ws.cell(row=start_row, column=36).border)
-            cell.alignment = copy(ws.cell(row=start_row, column=36).alignment)
+            cell.number_format = 'General'
 
     # 自动调整统计列宽（原AG/AH/AI→现AH/AI/AJ）
     ws.column_dimensions['AH'].width = 8  # 出勤天数列（34列）
