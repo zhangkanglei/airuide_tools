@@ -1,5 +1,6 @@
 import pandas as pd
 
+from openpyxl.styles import Font, Alignment
 from openpyxl import load_workbook
 from copy import copy
 from datetime import date
@@ -149,6 +150,9 @@ def process_attendance(old_path, template_path):
     # 加载底板并处理核心需求：提取部门+填充日期到红框位置
     wb = load_workbook(template_path)
     ws = wb.active
+    # ========== 全局统一格式（字体+居中）==========
+    uni_font = Font(name="宋体", size=10)  # 统一宋体10号
+    uni_align = Alignment(horizontal="center", vertical="center")  # 统一水平+垂直居中
     dept_name = ""
     # 从底板第二行第一列（A2）提取部门名（剔除无关后缀）
     dept_cell = ws.cell(row=2, column=1).value
@@ -207,18 +211,17 @@ def process_attendance(old_path, template_path):
                 cell = ws.cell(row=row_idx, column=col, value=sym)
                 template_cell = ws.cell(row=start_row, column=col)
                 if template_cell.has_style:
-                    cell.font = copy(template_cell.font)
+                    cell.font = uni_font
+                    cell.alignment = uni_align
                     cell.border = copy(template_cell.border)
-                    cell.fill = copy(template_cell.fill)
-                    cell.alignment = copy(template_cell.alignment)
             # 填充统计列：出勤/加班/请假（保留样式+自动调宽）
             # 核心修改：0值显示为空
             # 出勤天数（原33→现34列）
             work_days_val = person["work_days"] if person["work_days"] != 0 else ""
             cell = ws.cell(row=row_idx, column=34, value=work_days_val)
-            cell.font = copy(ws.cell(row=start_row, column=34).font)
+            cell.font = uni_font
+            cell.alignment = uni_align
             cell.border = copy(ws.cell(row=start_row, column=34).border)
-            cell.alignment = copy(ws.cell(row=start_row, column=34).alignment)
             # 加班天数（原34→现35列）
             overtime_days_val = person["overtime_days"] if person["overtime_days"] != 0 else ""
             cell = ws.cell(row=row_idx, column=35, value=overtime_days_val)
