@@ -212,18 +212,22 @@ def process_attendance(old_path, template_path):
                     cell.fill = copy(template_cell.fill)
                     cell.alignment = copy(template_cell.alignment)
             # 填充统计列：出勤/加班/请假（保留样式+自动调宽）
+            # 核心修改：0值显示为空
             # 出勤天数（原33→现34列）
-            cell = ws.cell(row=row_idx, column=34, value=person["work_days"])
+            work_days_val = person["work_days"] if person["work_days"] != 0 else ""
+            cell = ws.cell(row=row_idx, column=34, value=work_days_val)
             cell.font = copy(ws.cell(row=start_row, column=34).font)
             cell.border = copy(ws.cell(row=start_row, column=34).border)
             cell.alignment = copy(ws.cell(row=start_row, column=34).alignment)
             # 加班天数（原34→现35列）
-            cell = ws.cell(row=row_idx, column=35, value=person["overtime_days"])
+            overtime_days_val = person["overtime_days"] if person["overtime_days"] != 0 else ""
+            cell = ws.cell(row=row_idx, column=35, value=overtime_days_val)
             cell.font = copy(ws.cell(row=start_row, column=35).font)
             cell.border = copy(ws.cell(row=start_row, column=35).border)
             cell.alignment = copy(ws.cell(row=start_row, column=35).alignment)
             # 请假天数（原35→现36列）
-            cell = ws.cell(row=row_idx, column=36, value=person["leave_days"])
+            leave_days_val = person["leave_days"] if person["leave_days"] != 0 else ""
+            cell = ws.cell(row=row_idx, column=36, value=leave_days_val)
             cell.font = copy(ws.cell(row=start_row, column=36).font)
             cell.border = copy(ws.cell(row=start_row, column=36).border)
             cell.alignment = copy(ws.cell(row=start_row, column=36).alignment)

@@ -81,14 +81,15 @@
     <h1>考勤表自动转换</h1>
     <form method="POST" enctype="multipart/form-data">
         <div class="form-group">
-            <label>原始考勤表（系统导出的原始表）</label>
+            <label>原始考勤表（系统导出的所有部门原始表）</label>
             <input type="file" name="old_file" accept=".xlsx,.xls" required>
         </div>
         <div class="form-group">
-            <label>部门底板表（你提供的部门底板）</label>
-            <input type="file" name="template_file" accept=".xlsx,.xls" required>
+            <label>部门底板表（可选择多个，每个部门一个底板）</label>
+            <!-- 核心修改：增加multiple属性，支持多文件上传 -->
+            <input type="file" name="template_files" accept=".xlsx,.xls" required multiple>
         </div>
-        <button type="submit">开始转换，自动下载结果</button>
+        <button type="submit">开始转换，批量下载结果</button>
     </form>
     <div class="tip">
         <strong>功能说明：</strong>
@@ -97,6 +98,7 @@
             <li>自动删除多余的天数列，适配月份实际天数</li>
             <li>自动处理考勤规则：旷工按正常出勤、产假/半天标记、半天统计</li>
             <li>完全保留底板的人员名单和顺序，不改动原有格式</li>
+            <li>支持上传1个原始表 + 多个部门底板表，批量生成对应部门的考勤表</li>
         </ul>
     </div>
 </div>
