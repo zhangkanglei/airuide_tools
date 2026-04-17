@@ -86,24 +86,22 @@ def process_attendance(old_path, template_path):
             if "产假" in status_str:
                 sym = "产"
                 daily_status.append(sym)
-                work_days += 1
                 continue
-            elif "0.5天" in status_str or "半天" in status_str:
-                sym = "半"
-                daily_status.append(sym)
-                if "事假" in status_str or "病假" in status_str:
+            elif "0.5天" in status_str:
+                if "休息" in status_str:
+                    # 认为请假半天
+                    sym = "■"
+                    daily_status.append(sym)
+                elif "事假" in status_str or "病假" in status_str:
+                    # 认为请假半天
                     work_days += 0.5
                     leave_days += 0.5
+                    sym = "●"
+                    daily_status.append(sym)
                 else:
-                    work_days += 0.5
-                continue
-            elif "外出" in status_str:
-                if "休息" not in status_str:
                     sym = "√"
                     daily_status.append(sym)
                     work_days += 1
-                else:
-                    daily_status.append(None)
                 continue
             elif "病假" in status_str:
                 sym = "△"
@@ -115,12 +113,14 @@ def process_attendance(old_path, template_path):
                 daily_status.append(sym)
                 leave_days += 1
                 continue
-            # 区分加班类型：工作日不标，休息日/节假日标□
+            # 区分加班类型：工作日标正常出勤√，休息日/节假日标□
             elif "加班" in status_str:
-                if "工作日" in status_str:
-                    daily_status.append(None)
-                else:
+                if "休息" in status_str:
                     sym = "□"
+                    daily_status.append(sym)
+                else:
+                    sym = "√"  # 【修改处】工作日加班改为正常出勤符号
+                    work_days += 1
                     daily_status.append(sym)
                 continue
             elif "休息" in status_str:
@@ -136,10 +136,23 @@ def process_attendance(old_path, template_path):
                 daily_status.append(sym)
                 work_days += 1
                 continue
+            elif "产检" in status_str:
+                sym = "产检"
+                daily_status.append(sym)
+                work_days += 1
+                continue
             elif "婚假" in status_str:
                 sym = "婚"
                 daily_status.append(sym)
                 work_days += 1
+                continue
+            elif "正常" in status_str:
+                sym = "√"
+                daily_status.append(sym)
+                work_days += 1
+                continue
+            elif "休息" in status_str:
+                daily_status.append(None)
                 continue
             else:
                 sym = "√"
