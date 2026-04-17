@@ -35,7 +35,7 @@ def process_attendance(old_path, template_path):
         week_days.append(week_map[weekday])
         dates.append(day)
 
-    # 读取原始表加班汇总列 AC=工作日加班 AD=休息日加班 AE=节假日加班
+    # 读取原始表加班汇总列：AC=工作日加班 AD=休息日加班 AE=节假日加班
     header_row = old_raw.iloc[3]
     workday_overtime_col = None
     rest_overtime_col = None
@@ -65,7 +65,7 @@ def process_attendance(old_path, template_path):
         work_days = 0
         leave_days = 0
 
-        # 读取加班数据（强制转数字，避免空值报错）
+        # 读取加班数据（强制转数字）
         workday_overtime = float(row[workday_overtime_col]) if (workday_overtime_col is not None and pd.notna(row[workday_overtime_col])) else 0.0
         rest_overtime = float(row[rest_overtime_col]) if (rest_overtime_col is not None and pd.notna(row[rest_overtime_col])) else 0.0
         holiday_overtime = float(row[holiday_overtime_col]) if (holiday_overtime_col is not None and pd.notna(row[holiday_overtime_col])) else 0.0
@@ -73,7 +73,7 @@ def process_attendance(old_path, template_path):
         overtime_days = rest_overtime + holiday_overtime
         night_shift = workday_overtime * 2  # 夜班次=工作日加班×2
 
-        # 每日考勤状态（核心修复：休息日/节假日加班标□，工作日加班不标）
+        # 每日考勤状态
         for i, col in enumerate(daily_cols_old):
             if i >= days_in_month:
                 break
@@ -115,13 +115,13 @@ def process_attendance(old_path, template_path):
                 daily_status.append(sym)
                 leave_days += 1
                 continue
-            # 修复1：区分加班类型 → 工作日加班不标，休息日/节假日加班标□
+            # 区分加班类型：工作日不标，休息日/节假日标□
             elif "加班" in status_str:
                 if "工作日" in status_str:
-                    daily_status.append(None)  # 工作日加班不标
+                    daily_status.append(None)
                 else:
                     sym = "□"
-                    daily_status.append(sym)  # 休息日/节假日加班标符号
+                    daily_status.append(sym)
                 continue
             elif "休息" in status_str:
                 daily_status.append(None)
@@ -152,7 +152,7 @@ def process_attendance(old_path, template_path):
             "work_days": work_days,
             "overtime_days": overtime_days,
             "leave_days": leave_days,
-            "night_shift": night_shift  # 正确计算的夜班次
+            "night_shift": night_shift
         }
 
     # 加载底板
@@ -198,13 +198,12 @@ def process_attendance(old_path, template_path):
         cell.font = uni_font
         cell.alignment = uni_align
 
-    # 检测夜班次列（修复2：确保精准识别）
+    # ===================== 核心修复：检测AK3单元格是否为“夜班次” =====================
     night_shift_col = None
-    for col in range(1, ws.max_column + 1):
-        val = ws.cell(row=5, column=col).value
-        if pd.notna(val) and "夜班次" in str(val):
-            night_shift_col = col
-            break
+    ak_col = 37  # AK列固定是第37列
+    ak3_val = ws.cell(row=3, column=ak_col).value  # 检测AK3单元格
+    if pd.notna(ak3_val) and "夜班次" in str(ak3_val):
+        night_shift_col = ak_col  # 是夜班次，则填充到AK列
 
     # 读取人员名单
     template_names = []
@@ -256,7 +255,7 @@ def process_attendance(old_path, template_path):
         cell.border = copy(ws.cell(start_row, 36).border)
         cell.number_format = "General"
 
-        # 修复2：夜班次强制填充（有列就填，无则跳过）
+        # ===================== 核心修复：强制填充夜班次到AK列 =====================
         if night_shift_col is not None:
             val = person["night_shift"]
             v = int(val) if val.is_integer() else val if val != 0 else ""
@@ -271,8 +270,7 @@ def process_attendance(old_path, template_path):
     ws.column_dimensions['AI'].width = 8
     ws.column_dimensions['AJ'].width = 8
     if night_shift_col is not None:
-        col_letter = ws.cell(1, night_shift_col).column_letter
-        ws.column_dimensions[col_letter].width = 8
+        ws.column_dimensions['AK'].width = 8  # 固定调整AK列宽
 
     # 保存文件
     output_name = f"{year}年{month}月{dept_name}考勤.xlsx"
