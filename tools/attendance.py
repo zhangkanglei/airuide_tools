@@ -116,8 +116,12 @@ def process_attendance(old_path, template_path):
             # 区分加班类型：工作日标正常出勤√，休息日/节假日标□
             elif "加班" in status_str:
                 if "休息" in status_str:
-                    sym = "□"
-                    daily_status.append(sym)
+                    if "13:00" in status_str:
+                        sym = "■"
+                        daily_status.append(sym)
+                    else:
+                        sym = "□"
+                        daily_status.append(sym)
                 else:
                     sym = "√"  # 【修改处】工作日加班改为正常出勤符号
                     work_days += 1
@@ -241,37 +245,49 @@ def process_attendance(old_path, template_path):
             cell.alignment = uni_align
             cell.border = copy(ws.cell(start_row, col).border)
 
-        # 出勤 34列
+        # ===================== 核心修改：AH列（出勤，34列）0值填充空 =====================
         val = person["work_days"]
-        v = int(val) if val.is_integer() else val if val != 0 else ""
+        if val == 0 or val == 0.0:
+            v = ""
+        else:
+            v = int(val) if val.is_integer() else val
         cell = ws.cell(row_idx, 34, value=v)
         cell.font = uni_font
         cell.alignment = uni_align
         cell.border = copy(ws.cell(start_row, 34).border)
         cell.number_format = "General"
 
-        # 加班 35列
+        # ===================== 核心修改：AI列（加班，35列）0值填充空 =====================
         val = person["overtime_days"]
-        v = int(val) if val.is_integer() else val if val != 0 else ""
+        if val == 0 or val == 0.0:
+            v = ""
+        else:
+            v = int(val) if val.is_integer() else val
         cell = ws.cell(row_idx, 35, value=v)
         cell.font = uni_font
         cell.alignment = uni_align
         cell.border = copy(ws.cell(start_row, 35).border)
         cell.number_format = "General"
 
-        # 请假 36列
+        # ===================== 核心修改：AJ列（请假，36列）0值填充空 =====================
         val = person["leave_days"]
-        v = int(val) if val.is_integer() else val if val != 0 else ""
+        if val == 0 or val == 0.0:
+            v = ""
+        else:
+            v = int(val) if val.is_integer() else val
         cell = ws.cell(row_idx, 36, value=v)
         cell.font = uni_font
         cell.alignment = uni_align
         cell.border = copy(ws.cell(start_row, 36).border)
         cell.number_format = "General"
 
-        # ===================== 核心修复：强制填充夜班次到AK列 =====================
+        # ===================== 核心修改：AK列（夜班次，37列）0值填充空 =====================
         if night_shift_col is not None:
             val = person["night_shift"]
-            v = int(val) if val.is_integer() else val if val != 0 else ""
+            if val == 0 or val == 0.0:
+                v = ""
+            else:
+                v = int(val) if val.is_integer() else val
             cell = ws.cell(row=row_idx, column=night_shift_col, value=v)
             cell.font = uni_font
             cell.alignment = uni_align
