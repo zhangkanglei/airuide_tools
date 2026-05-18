@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>学生照片名称转换 - 艾瑞德在线工具</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: '微软雅黑', sans-serif;
+    }
+    body {
+      background-color: #f5f7fa;
+      padding: 40px;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: white;
+      padding: 32px;
+      border-radius: 12px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+    }
+    h1 {
+      text-align: center;
+      color: #333;
+      margin-bottom: 30px;
+    }
+    .form-group {
+      margin-bottom: 24px;
+    }
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      color: #333;
+      font-weight: 500;
+    }
+    .form-group input[type="file"] {
+      width: 100%;
+      padding: 16px;
+      border: 1px dashed #e5e6eb;
+      border-radius: 8px;
+      background: #f9fafc;
+      font-size: 14px;
+    }
+    .btn-submit {
+      width: 100%;
+      padding: 14px;
+      background: #165DFF;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    .btn-submit:hover {
+      background: #0047CC;
+    }
+    .tips {
+      color: #666;
+      font-size: 14px;
+      margin-top: 8px;
+      line-height: 1.6;
+      background: #f0f7ff;
+      padding: 12px;
+      border-radius: 6px;
+      border-left: 4px solid #165DFF;
+    }
+    .back {
+      display: block;
+      text-align: center;
+      margin-top: 20px;
+      color: #165DFF;
+      text-decoration: none;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>学生照片名称转换</h1>
+  <form method="POST" enctype="multipart/form-data">
+    <div class="form-group">
+      <label for="excel_file">上传学生信息Excel表</label>
+      <input type="file" id="excel_file" name="excel_file" accept=".xlsx" required>
+      <div class="tips">
+        <strong>Excel格式要求：</strong><br>
+        - 第一行必须包含表头：<b>姓名</b>、<b>身份证件号</b>、<b>学籍号</b><br>
+        - 这三个表头的顺序可以任意排列<br>
+        - 从第二行开始是学生数据
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="photo_files">上传学生照片（支持多选）</label>
+      <input type="file" id="photo_files" name="photo_files" multiple accept=".jpg" required>
+      <div class="tips">
+        <strong>照片命名要求：</strong><br>
+        - 必须是jpg格式<br>
+        - 文件名必须是学生的身份证件号（如：410600202007173023.jpg）<br>
+        - 身份证号中的X大小写不敏感
+      </div>
+    </div>
+
+    <button type="submit" class="btn-submit">开始转换并下载</button>
+  </form>
+  <a href="/" class="back">← 返回工具列表</a>
+</div>
+</body>
+</html>
