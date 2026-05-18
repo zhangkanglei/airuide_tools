@@ -1,0 +1,89 @@
+# -------------------------- Python 通用忽略 --------------------------
+# Python 编译文件
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# 虚拟环境
+venv/
+env/
+ENV/
+.venv/
+.env/
+
+# 日志文件
+*.log
+error.log
+access.log
+
+# 单元测试/覆盖率
+.coverage
+htmlcov/
+.pytest_cache/
+.tox/
+
+# -------------------------- Flask 项目专用 --------------------------
+# 实例文件夹
+instance/
+
+# 环境变量文件
+.flaskenv
+.env
+.env.local
+
+# 上传文件目录（核心：保留文件夹，忽略所有内容）
+uploads/*
+!uploads/.gitkeep
+
+# 临时生成的压缩包
+*.zip
+*.rar
+*.7z
+
+# -------------------------- IDE 和编辑器 --------------------------
+# PyCharm
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# -------------------------- 系统文件 --------------------------
+# Windows
+Thumbs.db
+*.db
+*.lnk
+
+# Mac
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Linux
+*~

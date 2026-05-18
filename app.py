@@ -2,6 +2,14 @@ from flask import Flask, request, send_file, render_template
 import os
 import zipfile
 import tempfile
+import logging
+# 配置日志
+logging.basicConfig(
+    level=logging.ERROR,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    filename='error.log',
+    filemode='a'
+)
 import shutil  # 新增：用于清理临时目录
 from datetime import datetime  # 新增：时间戳相关
 
