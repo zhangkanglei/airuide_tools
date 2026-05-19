@@ -91,12 +91,58 @@
       font-size: 13px;
       color: #e67e22;
     }
+    /* 进度条样式 */
+    .progress-container {
+      margin-top: 20px;
+      display: none;
+    }
+    .progress-bar {
+      width: 100%;
+      background-color: #e0e0e0;
+      border-radius: 10px;
+      overflow: hidden;
+      height: 20px;
+    }
+    .progress-fill {
+      width: 0%;
+      height: 100%;
+      background-color: #165DFF;
+      transition: width 0.3s ease;
+      text-align: center;
+      line-height: 20px;
+      color: white;
+      font-size: 12px;
+    }
+    .progress-status {
+      margin-top: 10px;
+      font-size: 14px;
+      color: #333;
+      text-align: center;
+    }
+    .error-message {
+      margin-top: 15px;
+      padding: 12px;
+      background-color: #ffe6e6;
+      border-left: 4px solid #d9534f;
+      color: #a94442;
+      border-radius: 6px;
+      display: none;
+    }
+    .success-message {
+      margin-top: 15px;
+      padding: 12px;
+      background-color: #e6ffe6;
+      border-left: 4px solid #5cb85c;
+      color: #3c763d;
+      border-radius: 6px;
+      display: none;
+    }
   </style>
 </head>
 <body>
 <div class="container">
   <h1>学生照片名称转换</h1>
-  <form method="POST" enctype="multipart/form-data" id="uploadForm">
+  <form id="uploadForm" enctype="multipart/form-data">
     <div class="form-group">
       <label for="excel_file">上传学生信息Excel表</label>
       <input type="file" id="excel_file" name="excel_file" accept=".xlsx" required>
@@ -122,15 +168,55 @@
 
     <button type="submit" class="btn-submit" id="submitBtn">开始转换并下载</button>
   </form>
+
+  <!-- 进度条区域 -->
+  <div class="progress-container" id="progressContainer">
+    <div class="progress-bar">
+      <div class="progress-fill" id="progressFill">0%</div>
+    </div>
+    <div class="progress-status" id="progressStatus">准备上传...</div>
+  </div>
+
+  <!-- 消息提示区域 -->
+  <div class="error-message" id="errorMsg"></div>
+  <div class="success-message" id="successMsg"></div>
+
+  <!-- 友好说明（额外建议） -->
+  <div class="tips warning" style="margin-top: 20px;">
+    <strong>💡 使用建议（避免卡顿）：</strong><br>
+    - 如果照片总大小超过 <b>200 MB</b>，请分批上传（例如一次30~40张），否则可能因网络超时导致上传失败。<br>
+    - 建议提前用图片压缩工具（如「JPEGmini」「Caesium」）将照片单张控制在 500KB 以内，能大幅提升处理速度。<br>
+    - 上传过程中请勿关闭页面，耐心等待进度条走完。<br>
+    - 若上传时间过长，可检查您的网络上传速度（推荐 >5 Mbps）。
+  </div>
+
   <a href="/" class="back">← 返回工具列表</a>
 </div>
 
 <script>
+  const form = document.getElementById('uploadForm');
+  const submitBtn = document.getElementById('submitBtn');
   const photoInput = document.getElementById('photo_files');
   const warningDiv = document.getElementById('fileSizeWarning');
-  const submitBtn = document.getElementById('submitBtn');
-  const MAX_TOTAL_MB = 500; // 限制总大小500MB，可根据服务器配置调整
+  const progressContainer = document.getElementById('progressContainer');
+  const progressFill = document.getElementById('progressFill');
+  const progressStatus = document.getElementById('progressStatus');
+  const errorMsgDiv = document.getElementById('errorMsg');
+  const successMsgDiv = document.getElementById('successMsg');
 
+  // 限制：建议最大总大小 500 MB，超过则禁止提交（可调整）
+  const MAX_TOTAL_MB = 500;
+
+  // 辅助函数：格式化字节数
+  function formatBytes(bytes) {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  }
+
+  // 监听照片选择，计算总大小
   photoInput.addEventListener('change', function() {
     const files = this.files;
     let totalBytes = 0;
@@ -142,20 +228,200 @@
       warningDiv.innerHTML = `<span style="color:#d9534f;">⚠️ 照片总大小 ${totalMB.toFixed(2)} MB 超过建议限制 ${MAX_TOTAL_MB} MB。请分批上传，否则可能导致上传超时或服务器错误。</span>`;
       submitBtn.disabled = true;
     } else {
-      warningDiv.innerHTML = `📸 已选择 ${files.length} 张照片，总大小 ${totalMB.toFixed(2)} MB`;
-      submitBtn.disabled = false;
-    }
-    if (files.length === 0) {
-      warningDiv.innerHTML = '';
+      if (files.length > 0) {
+        warningDiv.innerHTML = `📸 已选择 ${files.length} 张照片，总大小 ${totalMB.toFixed(2)} MB${totalMB > 200 ? '（较大，推荐分批上传）' : ''}`;
+      } else {
+        warningDiv.innerHTML = '';
+      }
       submitBtn.disabled = false;
     }
   });
 
-  // 可选：提交时显示loading效果
-  const form = document.getElementById('uploadForm');
-  form.addEventListener('submit', function() {
+  // 隐藏消息
+  function hideMessages() {
+    errorMsgDiv.style.display = 'none';
+    successMsgDiv.style.display = 'none';
+    errorMsgDiv.innerHTML = '';
+    successMsgDiv.innerHTML = '';
+  }
+
+  // 显示错误
+  function showError(msg) {
+    errorMsgDiv.innerHTML = msg;
+    errorMsgDiv.style.display = 'block';
+    successMsgDiv.style.display = 'none';
+  }
+
+  // 显示成功
+  function showSuccess(msg) {
+    successMsgDiv.innerHTML = msg;
+    successMsgDiv.style.display = 'block';
+    errorMsgDiv.style.display = 'none';
+  }
+
+  // 重置进度
+  function resetProgress() {
+    progressContainer.style.display = 'none';
+    progressFill.style.width = '0%';
+    progressFill.textContent = '0%';
+    progressStatus.textContent = '';
+  }
+
+  // 更新进度
+  function updateProgress(percent, loadedMB, totalMB, speedMBps, etaSec) {
+    progressFill.style.width = percent + '%';
+    progressFill.textContent = Math.floor(percent) + '%';
+    let statusText = `上传中 ${percent.toFixed(1)}% (${loadedMB.toFixed(2)} MB / ${totalMB.toFixed(2)} MB)`;
+    if (speedMBps > 0) {
+      statusText += ` | 速度: ${speedMBps.toFixed(2)} MB/s`;
+      if (etaSec < 60) {
+        statusText += ` | 剩余: ${Math.ceil(etaSec)} 秒`;
+      } else if (etaSec < 3600) {
+        statusText += ` | 剩余: ${Math.ceil(etaSec / 60)} 分钟`;
+      }
+    }
+    progressStatus.textContent = statusText;
+  }
+
+  // 提交表单（AJAX with progress）
+  form.addEventListener('submit', function(e) {
+    e.preventDefault();
+    hideMessages();
+    resetProgress();
+
+    const excelFile = document.getElementById('excel_file').files[0];
+    const photoFiles = document.getElementById('photo_files').files;
+
+    if (!excelFile) {
+      showError('请上传Excel文件');
+      return;
+    }
+    if (photoFiles.length === 0) {
+      showError('请至少上传一张照片');
+      return;
+    }
+
+    // 校验文件类型
+    if (!excelFile.name.endsWith('.xlsx')) {
+      showError('Excel文件请上传 .xlsx 格式');
+      return;
+    }
+    for (let i = 0; i < photoFiles.length; i++) {
+      if (!photoFiles[i].name.toLowerCase().endsWith('.jpg')) {
+        showError(`照片 "${photoFiles[i].name}" 不是 .jpg 格式`);
+        return;
+      }
+    }
+
+    // 准备 FormData
+    const formData = new FormData();
+    formData.append('excel_file', excelFile);
+    for (let i = 0; i < photoFiles.length; i++) {
+      formData.append('photo_files', photoFiles[i]);
+    }
+
+    // 计算总大小（用于进度显示）
+    let totalBytes = 0;
+    for (let i = 0; i < photoFiles.length; i++) {
+      totalBytes += photoFiles[i].size;
+    }
+    totalBytes += excelFile.size;
+    const totalMB = totalBytes / (1024 * 1024);
+    const startTime = Date.now();
+    let lastLoaded = 0;
+    let lastTime = startTime;
+
+    // 显示进度容器
+    progressContainer.style.display = 'block';
     submitBtn.disabled = true;
-    submitBtn.textContent = '处理中，请耐心等待...';
+    submitBtn.textContent = '处理中，请勿关闭页面...';
+
+    const xhr = new XMLHttpRequest();
+
+    // 监听上传进度
+    xhr.upload.addEventListener('progress', function(evt) {
+      if (evt.lengthComputable) {
+        const percent = (evt.loaded / evt.total) * 100;
+        const loadedMB = evt.loaded / (1024 * 1024);
+        const now = Date.now();
+        const timeDiff = (now - lastTime) / 1000;
+        const bytesDiff = evt.loaded - lastLoaded;
+        let speedMBps = 0;
+        if (timeDiff > 0.1 && bytesDiff > 0) {
+          speedMBps = (bytesDiff / (1024 * 1024)) / timeDiff;
+          lastLoaded = evt.loaded;
+          lastTime = now;
+        }
+        let etaSec = 0;
+        if (speedMBps > 0.1) {
+          const remainingMB = (evt.total - evt.loaded) / (1024 * 1024);
+          etaSec = remainingMB / speedMBps;
+        }
+        updateProgress(percent, loadedMB, totalMB, speedMBps, etaSec);
+      }
+    });
+
+    xhr.onload = function() {
+      submitBtn.disabled = false;
+      submitBtn.textContent = '开始转换并下载';
+      if (xhr.status === 200) {
+        // 成功：获取 blob 并触发下载
+        const blob = xhr.response;
+        const contentDisposition = xhr.getResponseHeader('Content-Disposition');
+        let filename = 'converted_photos.zip';
+        if (contentDisposition && contentDisposition.indexOf('filename=') !== -1) {
+          let match = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+          if (match && match[1]) {
+            filename = match[1].replace(/['"]/g, '');
+          }
+        }
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showSuccess(`✅ 处理成功！已下载 ${filename}。共处理 ${photoFiles.length} 张照片。`);
+        resetProgress();
+        // 可选：清空文件选择
+        // document.getElementById('excel_file').value = '';
+        // document.getElementById('photo_files').value = '';
+        // warningDiv.innerHTML = '';
+      } else {
+        // 错误处理
+        let errorText = `请求失败，状态码: ${xhr.status}`;
+        try {
+          const responseText = xhr.responseText;
+          if (responseText) {
+            errorText = responseText;
+          }
+        } catch(e) {}
+        showError(`❌ 处理出错：${errorText}`);
+        resetProgress();
+      }
+    };
+
+    xhr.onerror = function() {
+      submitBtn.disabled = false;
+      submitBtn.textContent = '开始转换并下载';
+      showError('网络错误或服务器无响应。请检查网络连接，或尝试分批上传较小的文件。');
+      resetProgress();
+    };
+
+    xhr.ontimeout = function() {
+      submitBtn.disabled = false;
+      submitBtn.textContent = '开始转换并下载';
+      showError('上传超时。照片总大小过大或网络上传速度太慢，请分批上传或压缩照片后重试。');
+      resetProgress();
+    };
+
+    // 设置超时时间 5 分钟（300000 ms）
+    xhr.timeout = 300000;
+    xhr.open('POST', '/photo_rename', true);
+    xhr.responseType = 'blob';  // 获取二进制数据
+    xhr.send(formData);
   });
 </script>
 </body>
