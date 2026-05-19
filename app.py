@@ -1,26 +1,27 @@
-from flask import Flask, request, send_file, render_template
+from flask import Flask, request, send_file, render_template, after_this_request
 import os
 import zipfile
 import tempfile
 import logging
+import shutil
+from datetime import datetime
+
 # 配置日志
 logging.basicConfig(
-    level=logging.ERROR,
+    level=logging.INFO,  # 改为INFO方便观察
     format='%(asctime)s - %(levelname)s - %(message)s',
     filename='error.log',
     filemode='a'
 )
-import shutil  # 新增：用于清理临时目录
-from datetime import datetime  # 新增：时间戳相关
 
 app = Flask(__name__)
-# 新增：设置最大上传大小为1GB（足够处理几百张照片）
+# 设置最大上传大小为1GB
 app.config['MAX_CONTENT_LENGTH'] = 1024 * 1024 * 1024
 UPLOAD_FOLDER = 'uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-# 工具的配置列表，后续加新工具，只需要在这里加一项就行
+# 工具列表
 TOOLS = [
     {
         "id": "attendance",
@@ -36,7 +37,6 @@ TOOLS = [
     }
 ]
 
-# 首页：工具列表+搜索
 @app.route('/')
 def index():
     search_key = request.args.get('search', '').strip()
@@ -46,7 +46,7 @@ def index():
             filtered_tools.append(tool)
     return render_template('index.html', tools=filtered_tools, search_key=search_key)
 
-# 考勤表转换工具的路由
+# 考勤表转换（未改动，保持原样）
 from tools.attendance import process_attendance
 @app.route('/attendance', methods=['GET', 'POST'])
 def attendance():
@@ -114,7 +114,7 @@ from tools.photo_rename import process_photo_rename
 @app.route('/photo_rename', methods=['GET', 'POST'])
 def photo_rename():
     if request.method == 'POST':
-        # 获取上传的文件
+        logging.info("开始处理照片重命名请求")
         excel_file = request.files['excel_file']
         photo_files = request.files.getlist('photo_files')
 
@@ -124,7 +124,7 @@ def photo_rename():
         if not photo_files:
             return "请至少上传一张学生照片！", 400
 
-        # 校验文件格式
+        # 校验格式
         if excel_file.filename.endswith('.xls'):
             return "Excel文件请上传xlsx格式，不支持xls格式，请用WPS/Office另存为xlsx后再上传。", 400
 
@@ -132,19 +132,38 @@ def photo_rename():
             if not photo_file.filename.lower().endswith('.jpg'):
                 return f"照片【{photo_file.filename}】格式不对，只支持jpg格式的照片！", 400
 
+        # 估算总大小（可选，用于日志）
+        total_size = 0
+        for pf in photo_files:
+            pf.seek(0, os.SEEK_END)
+            total_size += pf.tell()
+            pf.seek(0)
+        logging.info(f"收到 {len(photo_files)} 张照片，总大小约 {total_size/1024/1024:.2f} MB")
+
         # 保存Excel临时文件
         excel_filename = excel_file.filename
         excel_path = os.path.join(app.config['UPLOAD_FOLDER'], excel_filename)
         excel_file.save(excel_path)
 
+        zip_path = None
         try:
             # 调用处理函数
-            zip_path, zip_filename = process_photo_rename(excel_path, photo_files)
+            zip_path, zip_filename = process_photo_rename(excel_path, photo_files, UPLOAD_FOLDER)
 
             # 删除Excel临时文件
             os.remove(excel_path)
 
-            # 返回ZIP包下载
+            # 请求结束后删除ZIP临时文件
+            @after_this_request
+            def cleanup(response):
+                try:
+                    if zip_path and os.path.exists(zip_path):
+                        os.remove(zip_path)
+                        logging.info(f"已删除临时ZIP文件: {zip_path}")
+                except Exception as e:
+                    logging.error(f"删除临时ZIP失败: {e}")
+                return response
+
             return send_file(
                 zip_path,
                 as_attachment=True,
@@ -153,16 +172,19 @@ def photo_rename():
 
         except Exception as e:
             err_msg = str(e)
-            # 异常时清理临时文件
+            logging.error(f"处理出错: {err_msg}", exc_info=True)
+            # 清理Excel
             if os.path.exists(excel_path):
                 os.remove(excel_path)
+            # 清理可能已生成的ZIP
+            if zip_path and os.path.exists(zip_path):
+                os.remove(zip_path)
             if "File contains no valid workbook part" in err_msg:
                 return "Excel文件格式损坏，不能直接修改后缀名，请用WPS/Office打开后另存为xlsx格式。", 400
             else:
                 return f"处理出错了：{err_msg}", 500
 
-    # GET请求返回前端页面
     return render_template('photo_rename.html')
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    app.run(host='0.0.0.0', port=5000, debug=False)  # 生产环境建议debug=False

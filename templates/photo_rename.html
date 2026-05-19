@@ -59,6 +59,10 @@
     .btn-submit:hover {
       background: #0047CC;
     }
+    .btn-submit:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
     .tips {
       color: #666;
       font-size: 14px;
@@ -69,6 +73,11 @@
       border-radius: 6px;
       border-left: 4px solid #165DFF;
     }
+    .warning {
+      background: #fff3e0;
+      border-left-color: #ff7c00;
+      color: #aa6200;
+    }
     .back {
       display: block;
       text-align: center;
@@ -77,12 +86,17 @@
       text-decoration: none;
       font-size: 14px;
     }
+    #fileSizeWarning {
+      margin-top: 8px;
+      font-size: 13px;
+      color: #e67e22;
+    }
   </style>
 </head>
 <body>
 <div class="container">
   <h1>学生照片名称转换</h1>
-  <form method="POST" enctype="multipart/form-data">
+  <form method="POST" enctype="multipart/form-data" id="uploadForm">
     <div class="form-group">
       <label for="excel_file">上传学生信息Excel表</label>
       <input type="file" id="excel_file" name="excel_file" accept=".xlsx" required>
@@ -103,11 +117,46 @@
         - 文件名必须是学生的身份证件号（如：410600202007173023.jpg）<br>
         - 身份证号中的X大小写不敏感
       </div>
+      <div id="fileSizeWarning"></div>
     </div>
 
-    <button type="submit" class="btn-submit">开始转换并下载</button>
+    <button type="submit" class="btn-submit" id="submitBtn">开始转换并下载</button>
   </form>
   <a href="/" class="back">← 返回工具列表</a>
 </div>
+
+<script>
+  const photoInput = document.getElementById('photo_files');
+  const warningDiv = document.getElementById('fileSizeWarning');
+  const submitBtn = document.getElementById('submitBtn');
+  const MAX_TOTAL_MB = 500; // 限制总大小500MB，可根据服务器配置调整
+
+  photoInput.addEventListener('change', function() {
+    const files = this.files;
+    let totalBytes = 0;
+    for (let i = 0; i < files.length; i++) {
+      totalBytes += files[i].size;
+    }
+    const totalMB = totalBytes / (1024 * 1024);
+    if (totalMB > MAX_TOTAL_MB) {
+      warningDiv.innerHTML = `<span style="color:#d9534f;">⚠️ 照片总大小 ${totalMB.toFixed(2)} MB 超过建议限制 ${MAX_TOTAL_MB} MB。请分批上传，否则可能导致上传超时或服务器错误。</span>`;
+      submitBtn.disabled = true;
+    } else {
+      warningDiv.innerHTML = `📸 已选择 ${files.length} 张照片，总大小 ${totalMB.toFixed(2)} MB`;
+      submitBtn.disabled = false;
+    }
+    if (files.length === 0) {
+      warningDiv.innerHTML = '';
+      submitBtn.disabled = false;
+    }
+  });
+
+  // 可选：提交时显示loading效果
+  const form = document.getElementById('uploadForm');
+  form.addEventListener('submit', function() {
+    submitBtn.disabled = true;
+    submitBtn.textContent = '处理中，请耐心等待...';
+  });
+</script>
 </body>
 </html>
