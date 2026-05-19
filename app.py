@@ -8,10 +8,11 @@ from datetime import datetime
 
 # 配置日志
 logging.basicConfig(
-    level=logging.INFO,  # 改为INFO方便观察
+    level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     filename='error.log',
-    filemode='a'
+    filemode='a',
+    encoding='utf-8'   # 关键：指定编码
 )
 
 app = Flask(__name__)
