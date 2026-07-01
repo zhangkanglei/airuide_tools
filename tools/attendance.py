@@ -19,8 +19,10 @@ def process_attendance(old_path, template_path):
         year = 2025
         month = 11
 
-    # 固定31天，不删除列
-    days_in_month = 31
+    # ===== 核心修改：根据月份计算实际天数 =====
+    _, days_in_month = calendar.monthrange(year, month)  # 实际天数，如2月为28/29
+
+    # 生成日期和星期（只生成实际天数）
     week_days = []
     dates = []
     for day in range(1, days_in_month + 1):
@@ -54,7 +56,8 @@ def process_attendance(old_path, template_path):
     # 处理人员数据
     data_rows_old = old_raw.iloc[4:]
     name_col = 0
-    daily_cols_old = list(range(31, 62))
+    # ===== 核心修改：日期列只取实际天数 =====
+    daily_cols_old = list(range(31, 31 + days_in_month))  # 例：30天为31~60，31天为31~61
     old_people = {}
     for idx, row in data_rows_old.iterrows():
         name = row[name_col]
@@ -73,10 +76,9 @@ def process_attendance(old_path, template_path):
         overtime_days = rest_overtime + holiday_overtime
         night_shift = workday_overtime * 2  # 夜班次=工作日加班×2
 
-        # 每日考勤状态
+        # 每日考勤状态（只遍历实际存在的列）
         for i, col in enumerate(daily_cols_old):
-            if i >= days_in_month:
-                break
+            # 已无 break，因为列数正好等于天数
             status = row[col]
             if pd.isna(status):
                 daily_status.append(None)
@@ -89,11 +91,9 @@ def process_attendance(old_path, template_path):
                 continue
             elif "0.5天" in status_str:
                 if "休息" in status_str:
-                    # 认为请假半天
                     sym = "■"
                     daily_status.append(sym)
                 elif "事假" in status_str or "病假" in status_str:
-                    # 认为请假半天
                     work_days += 0.5
                     leave_days += 0.5
                     sym = "●"
@@ -113,7 +113,6 @@ def process_attendance(old_path, template_path):
                 daily_status.append(sym)
                 leave_days += 1
                 continue
-            # 区分加班类型：工作日标正常出勤√，休息日/节假日标□
             elif "加班" in status_str:
                 if "休息" in status_str:
                     if "13:00" in status_str:
@@ -123,7 +122,7 @@ def process_attendance(old_path, template_path):
                         sym = "□"
                         daily_status.append(sym)
                 else:
-                    sym = "√"  # 【修改处】工作日加班改为正常出勤符号
+                    sym = "√"
                     work_days += 1
                     daily_status.append(sym)
                 continue
@@ -154,9 +153,6 @@ def process_attendance(old_path, template_path):
                 sym = "√"
                 daily_status.append(sym)
                 work_days += 1
-                continue
-            elif "休息" in status_str:
-                daily_status.append(None)
                 continue
             else:
                 sym = "√"
@@ -189,7 +185,6 @@ def process_attendance(old_path, template_path):
     # 填充AI2日期
     target_row = 2
     target_col = 35
-    from openpyxl.worksheet.cell_range import CellRange
     target_range = None
     for merged_range in ws.merged_cells.ranges:
         if merged_range.min_row <= target_row <= merged_range.max_row and merged_range.min_col <= target_col <= merged_range.max_col:
@@ -201,28 +196,41 @@ def process_attendance(old_path, template_path):
     else:
         ws.cell(row=target_row, column=target_col, value=date_text)
 
-    # 更新表头
+    # ===== 更新表头：只更新实际天数对应的列（其余保留原样） =====
     date_row_idx = 4
     for i, d in enumerate(dates):
         col = 3 + i
         cell = ws.cell(row=date_row_idx, column=col, value=d)
         cell.font = uni_font
         cell.alignment = uni_align
+    # 对于多余的天数（模板可能预填了31天），可以清空或保持，但不清除也可
+    # 若想清空多余列，可循环 from days_in_month to 30（0-based）
+    for i in range(days_in_month, 31):  # 31是固定上限
+        col = 3 + i
+        cell = ws.cell(row=date_row_idx, column=col, value=None)
+        cell.font = uni_font
+        cell.alignment = uni_align
+
     week_row_idx = 5
     for i, w in enumerate(week_days):
         col = 3 + i
         cell = ws.cell(row=week_row_idx, column=col, value=w)
         cell.font = uni_font
         cell.alignment = uni_align
+    for i in range(days_in_month, 31):
+        col = 3 + i
+        cell = ws.cell(row=week_row_idx, column=col, value=None)
+        cell.font = uni_font
+        cell.alignment = uni_align
 
-    # ===================== 核心修复：检测AK3单元格是否为“夜班次” =====================
+    # 检测AK3单元格是否为“夜班次”
     night_shift_col = None
     ak_col = 37  # AK列固定是第37列
     ak3_val = ws.cell(row=3, column=ak_col).value  # 检测AK3单元格
     if pd.notna(ak3_val) and "夜班次" in str(ak3_val):
         night_shift_col = ak_col  # 是夜班次，则填充到AK列
 
-    # 读取人员名单
+    # 读取模板人员名单
     template_names = []
     start_row = 6
     for row_idx in range(start_row, ws.max_row + 1):
@@ -237,57 +245,52 @@ def process_attendance(old_path, template_path):
             continue
         person = old_people[name]
 
-        # 每日符号
-        for i, sym in enumerate(person["daily"]):
+        # 每日符号（只填充实际天数）
+        for i, sym in enumerate(person["daily"]):  # 此时列表长度就是实际天数
             col = 3 + i
             cell = ws.cell(row=row_idx, column=col, value=sym)
             cell.font = uni_font
             cell.alignment = uni_align
             cell.border = copy(ws.cell(start_row, col).border)
+        # 多余天数的格子可清空（保持空白）
+        for i in range(len(person["daily"]), 31):
+            col = 3 + i
+            cell = ws.cell(row=row_idx, column=col, value=None)
+            cell.font = uni_font
+            cell.alignment = uni_align
+            cell.border = copy(ws.cell(start_row, col).border)
 
-        # ===================== 核心修改：AH列（出勤，34列）0值填充空 =====================
+        # AH列（出勤）
         val = person["work_days"]
-        if val == 0 or val == 0.0:
-            v = ""
-        else:
-            v = int(val) if val.is_integer() else val
+        v = "" if (val == 0 or val == 0.0) else (int(val) if val.is_integer() else val)
         cell = ws.cell(row_idx, 34, value=v)
         cell.font = uni_font
         cell.alignment = uni_align
         cell.border = copy(ws.cell(start_row, 34).border)
         cell.number_format = "General"
 
-        # ===================== 核心修改：AI列（加班，35列）0值填充空 =====================
+        # AI列（加班）
         val = person["overtime_days"]
-        if val == 0 or val == 0.0:
-            v = ""
-        else:
-            v = int(val) if val.is_integer() else val
+        v = "" if (val == 0 or val == 0.0) else (int(val) if val.is_integer() else val)
         cell = ws.cell(row_idx, 35, value=v)
         cell.font = uni_font
         cell.alignment = uni_align
         cell.border = copy(ws.cell(start_row, 35).border)
         cell.number_format = "General"
 
-        # ===================== 核心修改：AJ列（请假，36列）0值填充空 =====================
+        # AJ列（请假）
         val = person["leave_days"]
-        if val == 0 or val == 0.0:
-            v = ""
-        else:
-            v = int(val) if val.is_integer() else val
+        v = "" if (val == 0 or val == 0.0) else (int(val) if val.is_integer() else val)
         cell = ws.cell(row_idx, 36, value=v)
         cell.font = uni_font
         cell.alignment = uni_align
         cell.border = copy(ws.cell(start_row, 36).border)
         cell.number_format = "General"
 
-        # ===================== 核心修改：AK列（夜班次，37列）0值填充空 =====================
+        # AK列（夜班次）
         if night_shift_col is not None:
             val = person["night_shift"]
-            if val == 0 or val == 0.0:
-                v = ""
-            else:
-                v = int(val) if val.is_integer() else val
+            v = "" if (val == 0 or val == 0.0) else (int(val) if val.is_integer() else val)
             cell = ws.cell(row=row_idx, column=night_shift_col, value=v)
             cell.font = uni_font
             cell.alignment = uni_align
@@ -299,9 +302,9 @@ def process_attendance(old_path, template_path):
     ws.column_dimensions['AI'].width = 8
     ws.column_dimensions['AJ'].width = 8
     if night_shift_col is not None:
-        ws.column_dimensions['AK'].width = 8  # 固定调整AK列宽
+        ws.column_dimensions['AK'].width = 8
 
-    # 保存文件
+    # 保存
     output_name = f"{year}年{month}月{dept_name}考勤.xlsx"
     output_path = os.path.join(os.path.dirname(old_path), output_name)
     wb.save(output_path)
