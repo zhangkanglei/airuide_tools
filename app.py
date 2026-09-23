@@ -35,6 +35,12 @@ TOOLS = [
         "name": "照片名称转换",
         "desc": "批量重命名照片文件，支持按序号/时间戳规则，自定义前缀，自动过滤非图片文件",
         "route": "/photo_rename"
+    },
+    {
+        "id": "birthday_export",
+        "name": "生日名单导出",
+        "desc": "根据学生/老师Excel生成指定月份的师生生日名单Word，幼儿园、小学、老师自动排序",
+        "route": "/birthday_export"
     }
 ]
 
@@ -186,6 +192,75 @@ def photo_rename():
                 return f"处理出错了：{err_msg}", 500
 
     return render_template('photo_rename.html')
+
+from tools.birthday_export import process_birthday_export
+@app.route('/birthday_export', methods=['GET', 'POST'])
+def birthday_export():
+    if request.method == 'POST':
+        student_file = request.files.get('student_file')
+        teacher_file = request.files.get('teacher_file')
+        month = request.form.get('month', '').strip()
+
+        # 校验文件
+        if student_file is None or student_file.filename == '':
+            return "请上传学生信息Excel文件！", 400
+        if teacher_file is None or teacher_file.filename == '':
+            return "请上传老师信息Excel文件！", 400
+        if not month.isdigit() or not (1 <= int(month) <= 12):
+            return "请选择正确的月份！", 400
+
+        # 校验格式
+        if not student_file.filename.lower().endswith('.xlsx'):
+            return "学生信息表请上传xlsx格式的文件，不支持xls格式！", 400
+        if not (teacher_file.filename.lower().endswith('.xls') or teacher_file.filename.lower().endswith('.xlsx')):
+            return "老师信息表请上传xls或xlsx格式的文件！", 400
+        student_filename = student_file.filename
+        teacher_filename = teacher_file.filename
+        student_path = os.path.join(UPLOAD_FOLDER, student_filename)
+        teacher_path = os.path.join(UPLOAD_FOLDER, teacher_filename)
+        student_file.save(student_path)
+        teacher_file.save(teacher_path)
+
+        output_path = None
+        try:
+            output_path, output_name = process_birthday_export(student_path, teacher_path, int(month))
+
+            # 文件很小（几十KB），读入内存后立即删除临时文件，避免 Windows 句柄占用
+            from io import BytesIO
+            with open(output_path, 'rb') as f:
+                file_data = BytesIO(f.read())
+            for p in (output_path, student_path, teacher_path):
+                try:
+                    if os.path.exists(p):
+                        os.remove(p)
+                except Exception as e:
+                    logging.error(f"删除临时文件失败: {e}")
+
+            return send_file(
+                file_data,
+                as_attachment=True,
+                download_name=output_name,
+                mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+            )
+
+        except Exception as e:
+            err_msg = str(e)
+            logging.error(f"处理出错: {err_msg}", exc_info=True)
+            # 清理临时文件
+            for p in (output_path, student_path, teacher_path):
+                if p and os.path.exists(p):
+                    try:
+                        os.remove(p)
+                    except Exception:
+                        pass
+            if "File contains no valid workbook part" in err_msg:
+                return "文件格式不对，不能直接修改文件后缀，请用WPS/Office打开后另存为对应格式再上传。", 400
+            elif "Worksheet named" in err_msg or "no worksheet named" in err_msg or "工作表" in err_msg:
+                return "Excel里缺少要求的sheet（学生表需含「幼儿园」「小学总表」，老师表需含「全部名单」），请检查文件。", 400
+            else:
+                return f"处理出错了：{err_msg}", 500
+
+    return render_template('birthday_export.html')
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=False)  # 生产环境建议debug=False

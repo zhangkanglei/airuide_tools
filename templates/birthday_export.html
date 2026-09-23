@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    生日名单导出 - 艾瑞德在线工具
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: '微软雅黑', sans-serif;
+        }
+        body {
+            background-color: #f5f7fa;
+            padding: 40px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+        }
+        .back {
+            margin-bottom: 20px;
+            color: #409eff;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 25px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+        }
+        input[type="file"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px dashed #ccc;
+            border-radius: 6px;
+            background: #fafafa;
+        }
+        select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            background: #fafafa;
+            font-size: 14px;
+            color: #333;
+        }
+        button {
+            width: 100%;
+            padding: 14px;
+            background: #409eff;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: #337ecc;
+        }
+        .tip {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f0f9ff;
+            border-radius: 6px;
+            color: #666;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        .tip ul {
+            padding-left: 20px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="back" onclick="window.location.href='/'">← 返回工具列表</div>
+    <h1>生日名单导出</h1>
+    <form method="POST" enctype="multipart/form-data">
+        <div class="form-group">
+            <label>学生信息Excel（需包含「幼儿园」和「小学总表」两个sheet）</label>
+            <input type="file" name="student_file" accept=".xlsx" required>
+        </div>
+        <div class="form-group">
+            <label>老师信息Excel（需包含「全部名单」sheet，取姓名和出生日期）</label>
+            <input type="file" name="teacher_file" accept=".xls,.xlsx" required>
+        </div>
+        <div class="form-group">
+            <label>选择月份</label>
+            <select name="month" required>
+                <option value="">请选择月份</option>
+                <option value="1">1月</option>
+                <option value="2">2月</option>
+                <option value="3">3月</option>
+                <option value="4">4月</option>
+                <option value="5">5月</option>
+                <option value="6">6月</option>
+                <option value="7">7月</option>
+                <option value="8">8月</option>
+                <option value="9">9月</option>
+                <option value="10">10月</option>
+                <option value="11">11月</option>
+                <option value="12">12月</option>
+            </select>
+        </div>
+        <button type="submit">生成生日名单Word</button>
+    </form>
+    <div class="tip">
+        <strong>功能说明：</strong>
+        <ul>
+            <li>学生信息：从「幼儿园」「小学总表」两个sheet取班级、姓名、生日</li>
+            <li>老师信息：从「全部名单」sheet取姓名、出生日期</li>
+            <li>幼儿园班级自动转换格式，如"大大一班"→"大大（1）班"</li>
+            <li>排序：幼儿园在最前，小学按年级班级顺序，老师最后并另起一行</li>
+            <li>同一天内同班级多人自动合并（如"五（3）班周怡杉、朱梦彤"）</li>
+            <li>生成格式参考"X年X月份教职工及学生生日名单"Word文档</li>
+        </ul>
+    </div>
+</div>
+</body>
+</html>
