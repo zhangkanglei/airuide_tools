@@ -5,8 +5,9 @@
 输出：指定月份的师生生日名单 Word 文档（.docx）
 
 格式规则（参照 2026.8月份师生生日名单.doc）：
-- 标题：X年X月份教职工及学生生日名单（居中加粗16pt）
-- 每天一个日期段：X月X日（居中加粗12pt），其下为当天过生日的人
+- 标题：X年X月份教职工及学生生日名单（居中加粗16pt，方正清刻本悦宋简体）
+- 每天一个日期段：X月X日（靠左、加粗、带下划线12pt），其下为当天过生日的人
+- 全文使用方正清刻本悦宋简体
 - 排序：幼儿园在最前（小→中→大→大大、班级号升序），小学按年级班级顺序（一~六、班级号升序），老师最后并另起一行
 - 同一天内：同班级多人合并为"班级+姓名1、姓名2"，不同班级/组之间用"，"连接；老师输出为"姓名老师，姓名老师"
 """
@@ -19,7 +20,7 @@ import pandas as pd
 import xlrd
 from docx import Document
 from docx.shared import Pt
-from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_LINE_SPACING
 from docx.oxml.ns import qn
 
 # 中文数字 → 阿拉伯数字（一~十）
@@ -190,23 +191,39 @@ def build_docx(year, month, students, teachers, output_path):
     """生成生日名单 Word 文档"""
     doc = Document()
 
-    # 默认字体：宋体 12pt
+    # 默认字体：方正清刻本悦宋简体 12pt，行距固定值18磅、无段前段后（对齐参考模板）
+    FONT_NAME = '方正清刻本悦宋简体'
     normal = doc.styles['Normal']
-    normal.font.name = 'Times New Roman'
+    normal.font.name = FONT_NAME
     normal.font.size = Pt(12)
-    normal.element.rPr.rFonts.set(qn('w:eastAsia'), '宋体')
+    normal.element.rPr.rFonts.set(qn('w:eastAsia'), FONT_NAME)
+    normal.paragraph_format.space_before = Pt(0)
+    normal.paragraph_format.space_after = Pt(0)
+    normal.paragraph_format.line_spacing_rule = WD_LINE_SPACING.EXACTLY
+    normal.paragraph_format.line_spacing = Pt(18)
 
-    def _set_font(run, size, bold):
-        run.font.name = 'Times New Roman'
+    def _set_font(run, size, bold, underline=False):
+        run.font.name = FONT_NAME
         run.font.size = Pt(size)
         run.font.bold = bold
-        run._element.rPr.rFonts.set(qn('w:eastAsia'), '宋体')
+        run.font.underline = underline
+        run._element.rPr.rFonts.set(qn('w:eastAsia'), FONT_NAME)
+
+    def _add_para(text, size, bold, align, underline=False):
+        """统一段落格式：固定18磅行距、无段前段后"""
+        para = doc.add_paragraph()
+        pf = para.paragraph_format
+        pf.space_before = Pt(0)
+        pf.space_after = Pt(0)
+        pf.line_spacing_rule = WD_LINE_SPACING.EXACTLY
+        pf.line_spacing = Pt(18)
+        para.alignment = align
+        run = para.add_run(text)
+        _set_font(run, size, bold, underline)
+        return para
 
     # 标题（居中加粗16pt）
-    title_para = doc.add_paragraph()
-    title_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    run = title_para.add_run(f"{year}年{month}月份教职工及学生生日名单")
-    _set_font(run, 16, True)
+    _add_para(f"{year}年{month}月份教职工及学生生日名单", 16, True, WD_ALIGN_PARAGRAPH.CENTER)
 
     # 按日期 1~31 分组输出
     for day in range(1, 32):
@@ -220,13 +237,10 @@ def build_docx(year, month, students, teachers, output_path):
         if not day_students and not day_teachers:
             continue
 
-        # 日期行（居中加粗12pt）
-        date_para = doc.add_paragraph()
-        date_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        run = date_para.add_run(f"{month}月{day}日")
-        _set_font(run, 12, True)
+        # 日期行（靠左、加粗、带下划线、12pt）
+        _add_para(f"{month}月{day}日", 12, True, WD_ALIGN_PARAGRAPH.LEFT, underline=True)
 
-        # 学生行：同班级合并为"班级+姓名1、姓名2"，不同组用"，"连接
+        # 学生行：同班级合并为"班级+姓名1、姓名2"，不同组用"，"连接，两端对齐
         if day_students:
             groups = []
             for s in day_students:
@@ -235,21 +249,15 @@ def build_docx(year, month, students, teachers, output_path):
                 else:
                     groups.append({'cls': s['cls'], 'names': [s['name']]})
             student_text = '，'.join(f"{g['cls']}{'、'.join(g['names'])}" for g in groups)
-            stu_para = doc.add_paragraph()
-            stu_para.alignment = WD_ALIGN_PARAGRAPH.LEFT
-            run = stu_para.add_run(student_text)
-            _set_font(run, 12, False)
+            _add_para(student_text, 12, False, WD_ALIGN_PARAGRAPH.JUSTIFY)
 
-        # 老师行：另起一行，"姓名老师，姓名老师"
+        # 老师行：另起一行，"姓名老师，姓名老师"，两端对齐
         if day_teachers:
             teacher_text = '，'.join(f"{t['name']}老师" for t in day_teachers)
-            tea_para = doc.add_paragraph()
-            tea_para.alignment = WD_ALIGN_PARAGRAPH.LEFT
-            run = tea_para.add_run(teacher_text)
-            _set_font(run, 12, False)
+            _add_para(teacher_text, 12, False, WD_ALIGN_PARAGRAPH.JUSTIFY)
 
-        # 日期之间空一行
-        doc.add_paragraph()
+        # 日期之间空一行（同样固定18磅行距）
+        _add_para('', 12, False, WD_ALIGN_PARAGRAPH.LEFT)
 
     doc.save(output_path)
 
